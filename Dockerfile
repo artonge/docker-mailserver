@@ -3,14 +3,14 @@ FROM debian:stretch-slim
 ARG VCS_REF
 ARG VCS_VERSION
 
-LABEL maintainer="Thomas VIAL"  \
-    org.label-schema.name="docker-mailserver" \
-    org.label-schema.description="A fullstack but simple mailserver (smtp, imap, antispam, antivirus, ssl...)" \
-    org.label-schema.url="https://github.com/tomav/docker-mailserver" \
-    org.label-schema.vcs-ref=$VCS_REF \
-    org.label-schema.vcs-url="https://github.com/tomav/docker-mailserver" \
-    org.label-schema.version=$VCS_VERSION \
-    org.label-schema.schema-version="1.0"
+LABEL maintainer="radicand"  \
+  org.label-schema.name="docker-mailserver" \
+  org.label-schema.description="A fullstack but simple mailserver (smtp, imap, antispam, antivirus, ssl...)" \
+  org.label-schema.url="https://github.com/radicand/docker-mailserver" \
+  org.label-schema.vcs-ref=$VCS_REF \
+  org.label-schema.vcs-url="https://github.com/radicand/docker-mailserver" \
+  org.label-schema.version=$VCS_VERSION \
+  org.label-schema.schema-version="1.0"
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV VIRUSMAILS_DELETE_DELAY=7
@@ -34,76 +34,72 @@ RUN echo "deb http://http.debian.net/debian stretch-backports main" | tee -a /et
   apt-get -y install postfix && \
   # TODO installing postfix with --no-install-recommends makes "checking ssl: generated default cert works correctly" fail
   apt-get -y install --no-install-recommends \
-    amavisd-new \
-    apt-transport-https \
-    arj \
-    binutils \
-    bzip2 \
-    ca-certificates \
-    cabextract \
-    clamav \
-    clamav-daemon \
-    cpio \
-    curl \
-    ed \
-    fail2ban \
-    fetchmail \
-    file \
-    gamin \
-    gzip \
-    gnupg \
-    iproute2 \
-    iptables \
-    locales \
-    logwatch \
-    libdate-manip-perl \
-    liblz4-tool \
-    libmail-spf-perl \
-    libnet-dns-perl \
-    libsasl2-modules \
-    lrzip \
-    lzop \
-    netcat-openbsd \
-    nomarch \
-    opendkim \
-    opendkim-tools \
-    opendmarc \
-    pax \
-    pflogsumm \
-    p7zip-full \
-    postfix-ldap \
-    postfix-pcre \
-    postfix-policyd-spf-python \
-    postsrsd \
-    pyzor \
-    razor \
-    ripole \
-    rpm2cpio \
-    rsyslog \
-    sasl2-bin \
-    spamassassin \
-    supervisor \
-    postgrey \
-    unrar-free \
-    unzip \
-    whois \
-    xz-utils \
-    zoo \
-    && \
-  # use Dovecot community repo to react faster on security updates
-  curl https://repo.dovecot.org/DOVECOT-REPO-GPG | gpg --import && \
-  gpg --export ED409DA1 > /etc/apt/trusted.gpg.d/dovecot.gpg && \
-  echo "deb https://repo.dovecot.org/ce-2.3-latest/debian/stretch stretch main" > /etc/apt/sources.list.d/dovecot-community.list && \
-  apt-get update -q --fix-missing && \
-  apt-get -y install --no-install-recommends \
-    dovecot-core \
-    dovecot-imapd \
-    dovecot-ldap \
-    dovecot-lmtpd \
-    dovecot-managesieved \
-    dovecot-pop3d \
-    dovecot-sieve \
-    && \
+  amavisd-new \
+  apt-transport-https \
+  arj \
+  binutils \
+  bzip2 \
+  ca-certificates \
+  cabextract \
+  clamav \
+  clamav-daemon \
+  cpio \
+  curl \
+  ed \
+  fail2ban \
+  fetchmail \
+  file \
+  gamin \
+  gzip \
+  gnupg \
+  iproute2 \
+  iptables \
+  locales \
+  logwatch \
+  libdate-manip-perl \
+  liblz4-tool \
+  libmail-spf-perl \
+  libnet-dns-perl \
+  libsasl2-modules \
+  lrzip \
+  lzop \
+  netcat-openbsd \
+  nomarch \
+  opendkim \
+  opendkim-tools \
+  opendmarc \
+  pax \
+  pflogsumm \
+  p7zip-full \
+  postfix-ldap \
+  postfix-pcre \
+  postfix-policyd-spf-python \
+  postsrsd \
+  pyzor \
+  razor \
+  ripole \
+  rpm2cpio \
+  rsyslog \
+  sasl2-bin \
+  spamassassin \
+  supervisor \
+  postgrey \
+  unrar-free \
+  unzip \
+  whois \
+  xz-utils \
+  zoo \
+  && \
+  # use backports for Dovecot - CE repo does not have arm
+  apt-get -t stretch-backports -y install --no-install-recommends \
+  dovecot-core \
+  dovecot-imapd \
+  dovecot-ldap \
+  dovecot-lmtpd \
+  dovecot-managesieved \
+  dovecot-pop3d \
+  dovecot-sieve \
+  && \
   apt-get autoclean && \
   rm -rf /var/lib/apt/lists/* && \
   rm -rf /usr/share/locale/* && \
@@ -115,15 +111,10 @@ RUN echo "deb http://http.debian.net/debian stretch-backports main" | tee -a /et
   rm -f /etc/postsrsd.secret && \
   rm -f /etc/cron.daily/00logwatch
 
-# install filebeat for logging
-RUN curl https://packages.elasticsearch.org/GPG-KEY-elasticsearch | apt-key add - && \
-  echo "deb http://packages.elastic.co/beats/apt stable main" | tee -a /etc/apt/sources.list.d/beats.list && \
-  apt-get update -q --fix-missing && \
-  apt-get -y install --no-install-recommends \
-    filebeat \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
-
+# Install filebeat
+RUN mkdir /opt/filebeat
+COPY build-filebeat/filebeat /opt/filebeat/filebeat-linux-arm
+RUN chmod +x /opt/filebeat/filebeat-linux-arm
 COPY target/filebeat.yml.tmpl /etc/filebeat/filebeat.yml.tmpl
 
 RUN echo "0 */6 * * * clamav /usr/bin/freshclam --quiet" > /etc/cron.d/clamav-freshclam && \
@@ -162,7 +153,7 @@ COPY target/postfix/ldap-users.cf target/postfix/ldap-groups.cf target/postfix/l
 # Enables Spamassassin CRON updates and update hook for supervisor
 # hadolint ignore=SC2016
 RUN sed -i -r 's/^(CRON)=0/\1=1/g' /etc/default/spamassassin && \
-    sed -i -r 's/^\$INIT restart/supervisorctl restart amavis/g' /etc/spamassassin/sa-update-hooks.d/amavisd-new
+  sed -i -r 's/^\$INIT restart/supervisorctl restart amavis/g' /etc/spamassassin/sa-update-hooks.d/amavisd-new
 
 # Enables Postgrey
 COPY target/postgrey/postgrey /etc/default/postgrey
